@@ -35,6 +35,7 @@
   "IGUI_DelScore_Reason_restoreFile": "Перед загрузкой restore.txt",
   "IGUI_DelScore_Reason_manual": "Сделан вручную",
   "IGUI_DelScore_Reason_daily": "Ежедневный автобэкап",
+  "IGUI_DelScore_Reason_start": "Запуск сервера",
   "IGUI_DelScore_Msg_EventStarted": "Ивент начался: %1",
   "IGUI_DelScore_Msg_Restored": "Таблицы восстановлены из бэкапа",
   "IGUI_DelScore_Msg_BackupSaved": "Бэкап #%1 сохранён"

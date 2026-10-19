@@ -35,6 +35,7 @@
   "IGUI_DelScore_Reason_restoreFile": "Before loading restore.txt",
   "IGUI_DelScore_Reason_manual": "Made by hand",
   "IGUI_DelScore_Reason_daily": "Daily automatic backup",
+  "IGUI_DelScore_Reason_start": "Server start",
   "IGUI_DelScore_Msg_EventStarted": "Event started: %1",
   "IGUI_DelScore_Msg_Restored": "Scoreboard restored from a backup",
   "IGUI_DelScore_Msg_BackupSaved": "Backup #%1 saved"

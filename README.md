@@ -19,7 +19,9 @@ killed" line on the character screen. Once per game minute the server reads it
 for every online player and adds the growth since the last reading to both
 boards. The server watches for deaths and resets the player's row then.
 
-The boards live in global ModData `DelScore` in the world save.
+The boards are kept in files on the server, `Zomboid/Lua/DelScore/`, written
+within seconds of every change - not in the world save, so a server closed
+without saving (console window closed) loses nothing.
 
 ## Admin controls
 
@@ -33,18 +35,25 @@ right click puts it back):
   board.
 - **Backups**: list of backups, make one now, restore one.
 
-## Backups
+## Files and backups
 
-- A backup is made automatically before every admin change (new event, set,
-  remove, restore), plus one automatically every game day. The world keeps the
-  last 30 manual and the last 24 daily backups.
-- Every backup is also written to `Zomboid/Lua/DelScore/backup_NNNN.txt` on
-  the server. `Zomboid/Lua/DelScore/current.txt` follows the live boards
-  (rewritten at most once a minute).
-- **Restore without the game UI** (for example after a world rollback): copy
-  any of these files to `Zomboid/Lua/DelScore/restore.txt`. The server loads
-  it within 10 seconds, backs up the current state first, then empties
-  `restore.txt`.
+All in `Zomboid/Lua/DelScore/` on the server:
+
+- `state_a.txt`, `state_b.txt`: the live state, written in turn within 2
+  seconds of a change. On start the server loads the newer complete one, so a
+  crash in the middle of a write still leaves the other file.
+- `backup_NNNN.txt`: a backup is made before every admin change (new event,
+  set, remove, restore), on every server start and every game day. The
+  admin window lists the last 30 manual and 24 automatic ones; older files
+  stay on disk.
+- `backups.txt`: index of the listed backups.
+- **Restore without the game UI**: copy any backup or state file to
+  `restore.txt`. The server loads it within 10 seconds, backs up the current
+  state first, then empties `restore.txt`.
 
 The file format is plain text: `total<TAB>username<TAB>kills` and
 `event<TAB>username<TAB>kills` lines, plus `event_*=` header lines.
+
+If the world itself is rolled back (server stopped without saving), the
+boards keep the kills they already had; a character whose counter came back
+lower continues counting from there.
