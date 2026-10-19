@@ -1,6 +1,6 @@
 {
   "IGUI_DelScore_Title": "Вбивства зомбі",
-  "IGUI_DelScore_ButtonTip": "Таблиці вбивств зомбі",
+  "IGUI_DelScore_ButtonTip": "Вбивства зомбі <LINE> <RGB:0.7,0.7,0.7> Перетягніть, щоб перемістити; правий клік — повернути під ліву панель",
   "IGUI_DelScore_TabTotal": "Загальна",
   "IGUI_DelScore_TabEvent": "Івент",
   "IGUI_DelScore_TotalInfo": "Вбивства поточного персонажа, смерть обнуляє",

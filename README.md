@@ -23,7 +23,8 @@ The boards live in global ModData `DelScore` in the world save.
 
 ## Admin controls
 
-In the window (button under the left sidebar):
+In the window (button under the left sidebar; players can drag it anywhere,
+right click puts it back):
 
 - **New event**: asks for a name, then starts the event board from zero.
 - **Stop / Resume**: freezes the event board without clearing it, or

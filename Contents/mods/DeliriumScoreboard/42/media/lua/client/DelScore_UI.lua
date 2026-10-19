@@ -430,39 +430,139 @@ end
 ---- sidebar button -----------------------------------------------------------
 
 -- Under the vanilla left sidebar, one slot below the Delirium News button.
+-- Players can drag it anywhere; right click puts it back (same as the news
+-- button, see Delirium-NewsBoard).
 -- Not a child of the sidebar: vanilla rebuilds it and its shrinkWrap() would
 -- take our button as its own. Always on top, or the chat window covers it.
+DelScoreButton = ISButton:derive("DelScoreButton")
+
 local SIDEBAR_GAP = 15
-local SLOT = 1   -- 0 is taken by Delirium News
+local SLOT = 1           -- 0 is taken by Delirium News
+local DRAG_THRESHOLD = 6
+local POS_FILE = "DelScore_button.txt"   -- client Zomboid/Lua, per player machine
+
+local customPos = nil    -- { x, y } once dragged, nil = follow the sidebar
+
+local function loadPos()
+	local r = getFileReader(POS_FILE, false)
+	if not r then return end
+	local line = r:readLine()
+	r:close()
+	local x, y = string.match(line or "", "^(%-?%d+),(%-?%d+)$")
+	if x then customPos = { x = tonumber(x), y = tonumber(y) } end
+end
+
+local function savePos()
+	local w = getFileWriter(POS_FILE, true, false)
+	if not w then return end
+	if customPos then
+		w:write(string.format("%d,%d", customPos.x, customPos.y))
+	else
+		w:write("auto")
+	end
+	w:close()
+end
+
+local function clampToScreen(x, y, size)
+	x = math.max(0, math.min(x, getCore():getScreenWidth() - size))
+	y = math.max(0, math.min(y, getCore():getScreenHeight() - size))
+	return math.floor(x), math.floor(y)
+end
 
 local function placeButton()
 	local b = UI.button
-	if not b then return end
+	if not b or b.dragging then return end
 	local bar = ISEquippedItem and ISEquippedItem.instance
-	if not bar or not bar:getIsVisible() then
+	-- Vanilla icons are TEXTURE_WIDTH wide and 0.75 of that high.
+	local size = 36
+	if bar and bar:getWidth() >= 16 then size = math.floor(bar:getWidth() * 0.75) end
+	if b.width ~= size then b:setWidth(size); b:setHeight(size) end
+
+	local x, y
+	if customPos then
+		x, y = clampToScreen(customPos.x, customPos.y, size)
+	elseif bar and bar:getIsVisible() then
+		x = bar:getAbsoluteX() + (bar:getWidth() - size) / 2
+		y = bar:getAbsoluteY() + bar:getHeight() + SIDEBAR_GAP + SLOT * (size + SIDEBAR_GAP)
+	else
 		if b:getIsVisible() then b:setVisible(false) end
 		return
 	end
-	local size = 36
-	if bar:getWidth() >= 16 then size = math.floor(bar:getWidth() * 0.75) end
-	if b.width ~= size then b:setWidth(size); b:setHeight(size) end
-	b:setX(bar:getAbsoluteX() + (bar:getWidth() - size) / 2)
-	b:setY(bar:getAbsoluteY() + bar:getHeight() + SIDEBAR_GAP + SLOT * (size + SIDEBAR_GAP))
+	b:setX(x)
+	b:setY(y)
 	if not b:getIsVisible() then b:setVisible(true) end
 end
 
-DelScoreButton = ISButton:derive("DelScoreButton")
-
 function DelScoreButton:prerender()
-	local a = self:isMouseOver() and 1 or 0.85
+	local a = (self:isMouseOver() or self.dragging) and 1 or 0.85
 	self:drawTextureScaled(self.tex, 0, 0, self.width, self.height, a, 1, 1, 1)
 end
 
 function DelScoreButton:render()
 end
 
+function DelScoreButton:onMouseDown(x, y)
+	self.dragStart = { mx = getMouseX(), my = getMouseY(), x = self:getAbsoluteX(), y = self:getAbsoluteY() }
+	self.dragging = false
+	return ISButton.onMouseDown(self, x, y)
+end
+
+local function dragMove(self)
+	local s = self.dragStart
+	if not s or not self.pressed then return end
+	local dx, dy = getMouseX() - s.mx, getMouseY() - s.my
+	if not self.dragging and math.abs(dx) + math.abs(dy) >= DRAG_THRESHOLD then
+		self.dragging = true
+	end
+	if self.dragging then
+		local x, y = clampToScreen(s.x + dx, s.y + dy, self.width)
+		customPos = { x = x, y = y }
+		self:setX(x)
+		self:setY(y)
+	end
+end
+
+function DelScoreButton:onMouseMove(dx, dy)
+	ISButton.onMouseMove(self, dx, dy)
+	dragMove(self)
+end
+
+-- A fast drag leaves the button's rectangle; keep following the mouse.
+function DelScoreButton:onMouseMoveOutside(dx, dy)
+	ISButton.onMouseMoveOutside(self, dx, dy)
+	dragMove(self)
+end
+
+local function endDrag(self)
+	local dragged = self.dragging
+	self.dragStart = nil
+	self.dragging = false
+	if dragged then savePos() end
+	return dragged
+end
+
+function DelScoreButton:onMouseUp(x, y)
+	if endDrag(self) then
+		self.pressed = false   -- a drag is not a click
+		return
+	end
+	ISButton.onMouseUp(self, x, y)
+end
+
+function DelScoreButton:onMouseUpOutside(x, y)
+	endDrag(self)
+	ISButton.onMouseUpOutside(self, x, y)
+end
+
+function DelScoreButton:onRightMouseUp(x, y)
+	customPos = nil
+	savePos()
+	return true
+end
+
 local function createButton()
 	if UI.button then return end
+	loadPos()
 	UI.button = DelScoreButton:new(0, 0, 36, 36, "", nil, function() UI.toggle() end)
 	UI.button.tex = getTexture("media/ui/DelScore_Btn.png")
 	UI.button:initialise()

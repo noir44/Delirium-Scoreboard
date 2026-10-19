@@ -1,6 +1,6 @@
 {
   "IGUI_DelScore_Title": "Zombie kills",
-  "IGUI_DelScore_ButtonTip": "Zombie kill boards",
+  "IGUI_DelScore_ButtonTip": "Zombie kills <LINE> <RGB:0.7,0.7,0.7> Drag to move; right click to put it back under the left panel",
   "IGUI_DelScore_TabTotal": "Overall",
   "IGUI_DelScore_TabEvent": "Event",
   "IGUI_DelScore_TotalInfo": "Kills of the current character; death resets them",
