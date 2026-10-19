@@ -3,8 +3,9 @@
 Project Zomboid Build 42 mod for the Delirium server: zombie kill boards with
 two tabs.
 
-- **Overall**: zombie kills of the player's current character. Death resets it
-  to 0: a respawn in Project Zomboid is a brand new character.
+- **Overall**: vanilla's own counter of the player's current character (the
+  "Zombies killed" line of the character screen, the server's copy). A respawn
+  in Project Zomboid is a brand new character, so death resets it.
 - **Event**: kills made since an admin started the current event. A new event
   starts this board from zero, so it can be used to score server events. Death
   resets the player's event score too, unless the sandbox option
@@ -14,12 +15,15 @@ PvP kills are not counted.
 
 ## How kills are counted
 
-Every zombie death the server processes fires `OnZombieDead`; the kill goes
-to the player in `zombie:getAttackedBy()`. The vanilla counter
-`getZombieKills()` is not used: on a dedicated server its copy misses kills
-(the engine only raises it on some of the ways a zombie dies). The server
-watches for player deaths and resets the player's row then. Kills made before
-the mod was installed are not on the board.
+- **Overall** copies `player:getZombieKills()` of every online player twice a
+  second. Offline players keep their last value.
+- **Event** counts every zombie death the server processes (`OnZombieDead`),
+  credited to the player in `zombie:getAttackedBy()`.
+
+The two can differ: on a dedicated server the vanilla counter misses some
+kills (the engine raises it only on some of the ways a zombie dies; a test
+gave 15 on the counter for 20 zombies killed). The event board is the exact
+one.
 
 The boards are kept in files on the server, `Zomboid/Lua/DelScore/`, written
 within seconds of every change - not in the world save, so a server closed
@@ -34,7 +38,8 @@ right click puts it back):
 - **Stop / Resume**: freezes the event board without clearing it, or
   continues counting.
 - Right-click on a row: set a player's value, or remove the player from that
-  board.
+  board. On the overall board, setting a value changes the character's own
+  counter, so the player must be online and alive.
 - **Backups**: list of backups, make one now, restore one.
 
 ## Files and backups

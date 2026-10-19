@@ -52,6 +52,10 @@ local function onServerCommand(module, command, args)
 	elseif command == "backups" then
 		C.backups = args and args.list or {}
 		if DelScoreUI then DelScoreUI.onBackups() end
+	elseif command == "setKills" and args and args.value then
+		-- An admin set this character's counter on the main board.
+		local player = getPlayer()
+		if player then player:setZombieKills(math.floor(tonumber(args.value) or 0)) end
 	elseif command == "msg" and args and args.key then
 		local player = getPlayer()
 		if player then

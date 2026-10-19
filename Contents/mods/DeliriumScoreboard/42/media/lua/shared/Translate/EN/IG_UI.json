@@ -3,7 +3,7 @@
   "IGUI_DelScore_ButtonTip": "Zombie kills <LINE> <RGB:0.7,0.7,0.7> Drag to move; right click to put it back under the left panel",
   "IGUI_DelScore_TabTotal": "Overall",
   "IGUI_DelScore_TabEvent": "Event",
-  "IGUI_DelScore_TotalInfo": "Kills of the current character; death resets them",
+  "IGUI_DelScore_TotalInfo": "Zombies killed by the current character (server counter)",
   "IGUI_DelScore_NoEvent": "No event has been started yet",
   "IGUI_DelScore_EventName": "Event: %1",
   "IGUI_DelScore_EventRunning": "Running since %1 (%2)",
@@ -38,5 +38,6 @@
   "IGUI_DelScore_Reason_start": "Server start",
   "IGUI_DelScore_Msg_EventStarted": "Event started: %1",
   "IGUI_DelScore_Msg_Restored": "Scoreboard restored from a backup",
-  "IGUI_DelScore_Msg_BackupSaved": "Backup #%1 saved"
+  "IGUI_DelScore_Msg_BackupSaved": "Backup #%1 saved",
+  "IGUI_DelScore_Msg_NotOnline": "%1 must be online and alive to set the main board: it shows the character's own counter"
 }

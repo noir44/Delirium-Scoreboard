@@ -3,7 +3,7 @@
   "IGUI_DelScore_ButtonTip": "Вбивства зомбі <LINE> <RGB:0.7,0.7,0.7> Перетягніть, щоб перемістити; правий клік — повернути під ліву панель",
   "IGUI_DelScore_TabTotal": "Загальна",
   "IGUI_DelScore_TabEvent": "Івент",
-  "IGUI_DelScore_TotalInfo": "Вбивства поточного персонажа, смерть обнуляє",
+  "IGUI_DelScore_TotalInfo": "Вбито поточним персонажем (лічильник сервера)",
   "IGUI_DelScore_NoEvent": "Івент ще не запускався",
   "IGUI_DelScore_EventName": "Івент: %1",
   "IGUI_DelScore_EventRunning": "Триває з %1 (%2)",
@@ -38,5 +38,6 @@
   "IGUI_DelScore_Reason_start": "Запуск сервера",
   "IGUI_DelScore_Msg_EventStarted": "Івент почався: %1",
   "IGUI_DelScore_Msg_Restored": "Таблиці відновлено з бекапу",
-  "IGUI_DelScore_Msg_BackupSaved": "Бекап #%1 збережено"
+  "IGUI_DelScore_Msg_BackupSaved": "Бекап #%1 збережено",
+  "IGUI_DelScore_Msg_NotOnline": "%1 має бути в грі й живий: загальна таблиця показує лічильник самого персонажа"
 }

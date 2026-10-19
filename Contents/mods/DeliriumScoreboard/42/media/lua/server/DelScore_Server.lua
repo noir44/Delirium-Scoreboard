@@ -1,15 +1,18 @@
 -- Delirium-Scoreboard: server side.
 --
 -- Two boards of zombie kills:
---   totals - kills of the player's current character; death sets it to 0
---            (a respawn in PZ is a brand new character);
+--   totals - vanilla's own counter player:getZombieKills() of the current
+--            character (the "Zombies killed" line of the character screen),
+--            the server's copy, read for every online player twice a second;
+--            a respawn in PZ is a brand new character with it at 0;
 --   event  - kills made while the current event runs (an admin starts it,
---            which starts this board from zero); death sets it to 0 too
---            unless the sandbox option DelScore.EventResetOnDeath is off.
+--            which starts this board from zero); death sets it to 0 unless the
+--            sandbox option DelScore.EventResetOnDeath is off.
 --
--- Counted on Events.OnZombieDead, credited to zombie:getAttackedBy() when that
--- is a player. Not player:getZombieKills(): the server's copy of that counter
--- misses kills (20 zombies killed, 15 on the counter). In the jar it only grows
+-- The event board counts on Events.OnZombieDead, credited to
+-- zombie:getAttackedBy() when that is a player, not by the vanilla counter:
+-- the server's copy of that counter misses kills (20 zombies killed, 15 on the
+-- counter). The two boards may differ for that reason. In the jar it only grows
 -- in IsoGameCharacter.hitConsequences, the "DoDeath" animation event of
 -- ZombieHitReactionState and vehicle hits, while every death goes through
 -- IsoGameCharacter.Kill(killer): setAttackedBy(killer), then
@@ -285,27 +288,22 @@ end
 
 ---- counting -----------------------------------------------------------------
 
-local function addKills(username, n)
-	if n <= 0 then return end
-	S.totals[username] = (S.totals[username] or 0) + n
-	if S.event.active then
-		S.event.kills[username] = (S.event.kills[username] or 0) + n
-	end
-	changed()
-end
-
+-- Event board only; the main board is the vanilla counter (see checkPlayers).
 local function onZombieDead(zombie)
 	local killer = zombie and zombie:getAttackedBy()
 	if not killer or not instanceof(killer, "IsoPlayer") then return end
 	local username = killer:getUsername()
 	if not username or username == "" then return end
 	state()
-	addKills(username, 1)
+	if not S.event.active then return end
+	S.event.kills[username] = (S.event.kills[username] or 0) + 1
+	changed()
 end
 
--- Death resets the player's row. A dead character's IsoPlayer stays dead; the
--- respawned one is a new object. Also puts every online player on the board.
-local function checkDeaths()
+-- Copies every online player's vanilla counter to the main board and resets
+-- rows on death. A dead character's IsoPlayer stays dead; the respawned one is
+-- a new object with its counter at 0.
+local function checkPlayers()
 	for username, obj in pairs(alive) do
 		if obj:isDead() then
 			alive[username] = nil
@@ -326,8 +324,14 @@ local function checkDeaths()
 			local username = p and p:getUsername()
 			if username then
 				online[username] = true
-				if not p:isDead() then alive[username] = p end
-				if S.totals[username] == nil then
+				if not p:isDead() then
+					alive[username] = p
+					local kills = math.floor(tonumber(p:getZombieKills()) or 0)
+					if S.totals[username] ~= kills then
+						S.totals[username] = kills
+						changed()
+					end
+				elseif S.totals[username] == nil then
 					S.totals[username] = 0
 					changed()
 				end
@@ -388,6 +392,16 @@ local function cleanName(s)
 	return string.sub(s, 1, DelScore.EVENT_NAME_MAX)
 end
 
+
+local function findOnline(username)
+	local players = getOnlinePlayers()
+	if not players then return nil end
+	for i = 0, players:size() - 1 do
+		local p = players:get(i)
+		if p and p:getUsername() == username then return p end
+	end
+	return nil
+end
 local function boardOf(board)
 	if board == "event" then return S.event.kills end
 	if board == "total" then return S.totals end
@@ -434,7 +448,22 @@ function adminCommands.set(player, args)
 	local username = type(args.name) == "string" and args.name or nil
 	local value = math.floor(tonumber(args.value) or -1)
 	if not t or not username or value < 0 or value > MAX_VALUE then return end
+	-- The main board shows the vanilla counter, so a value set only in the
+	-- table would be overwritten at once: set the character's counter itself.
+	local target = nil
+	if args.board == "total" then
+		target = findOnline(username)
+		if not target or target:isDead() then
+			reply(player, "IGUI_DelScore_Msg_NotOnline", username)
+			return
+		end
+	end
 	makeBackup("manual", "set", player:getUsername(), string.format("%s %s=%d", args.board, username, value))
+	if target then
+		target:setZombieKills(value)
+		-- The client keeps its own copy of the counter (character screen).
+		sendServerCommand(target, MOD, "setKills", { value = value })
+	end
 	t[username] = value
 	changed()
 	saveState()
@@ -501,7 +530,7 @@ local function onTick()
 	local now = getTimestampMs()
 	if now - lastDeathCheck >= DEATH_CHECK_MS then
 		lastDeathCheck = now
-		checkDeaths()
+		checkPlayers()
 	end
 	if now - lastRestoreCheck >= RESTORE_CHECK_MS then
 		lastRestoreCheck = now
