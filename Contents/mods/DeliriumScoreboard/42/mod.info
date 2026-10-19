@@ -1,0 +1,6 @@
+name=Delirium Scoreboard
+id=DelScore
+description=Zombie kill boards for the Delirium server: an all-time board and an event board that admins restart from zero. Backups before every change. Build 42.
+poster=poster.png
+author=noir4
+versionMin=42.13
