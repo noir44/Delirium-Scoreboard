@@ -14,10 +14,12 @@ PvP kills are not counted.
 
 ## How kills are counted
 
-The source is vanilla's own counter `player:getZombieKills()`, the "Zombies
-killed" line on the character screen. Once per game minute the server reads it
-for every online player and adds the growth since the last reading to both
-boards. The server watches for deaths and resets the player's row then.
+Every zombie death the server processes fires `OnZombieDead`; the kill goes
+to the player in `zombie:getAttackedBy()`. The vanilla counter
+`getZombieKills()` is not used: on a dedicated server its copy misses kills
+(the engine only raises it on some of the ways a zombie dies). The server
+watches for player deaths and resets the player's row then. Kills made before
+the mod was installed are not on the board.
 
 The boards are kept in files on the server, `Zomboid/Lua/DelScore/`, written
 within seconds of every change - not in the world save, so a server closed

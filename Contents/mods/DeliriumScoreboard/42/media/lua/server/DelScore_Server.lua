@@ -7,10 +7,14 @@
 --            which starts this board from zero); death sets it to 0 too
 --            unless the sandbox option DelScore.EventResetOnDeath is off.
 --
--- The source is vanilla's own per-character counter player:getZombieKills()
--- (the "Zombies killed" line of the character screen). The server reads it for
--- every online player once a game minute and adds the growth since the last
--- reading to both boards, so a player is never counted twice.
+-- Counted on Events.OnZombieDead, credited to zombie:getAttackedBy() when that
+-- is a player. Not player:getZombieKills(): the server's copy of that counter
+-- misses kills (20 zombies killed, 15 on the counter). In the jar it only grows
+-- in IsoGameCharacter.hitConsequences, the "DoDeath" animation event of
+-- ZombieHitReactionState and vehicle hits, while every death goes through
+-- IsoGameCharacter.Kill(killer): setAttackedBy(killer), then
+-- IsoZombie.onKilled, which fires OnZombieDead when not GameClient.client,
+-- i.e. on the server, once per zombie (isOnKillDone guard).
 --
 -- Storage is files in Zomboid/Lua/DelScore/, NOT world ModData: ModData only
 -- reaches disk when the world is saved, and a server closed without saving
@@ -38,8 +42,6 @@ local dirty = true        -- boards changed since the last broadcast
 local unsaved = false     -- state changed since the last state file write
 local lastDeathCheck, lastBroadcast, lastSave, lastRestoreCheck = 0, 0, 0, 0
 local alive = {}          -- username -> IsoPlayer last seen alive
-local readThisRun = {}    -- username -> true once read since the server started
-local warned = {}         -- username -> counter value already reported as going down
 
 local function log(msg) print("[DelScore] " .. msg) end
 
@@ -52,8 +54,6 @@ local function newState()
 	return {
 		seq = 0,
 		totals = {},       -- username -> kills
-		seen = {},         -- username -> last getZombieKills() read
-		newLife = {},      -- username -> true once the character died
 		event = { name = "", active = false, kills = {} },
 		backups = {},      -- index, oldest first: { id, kind, reason, arg, by, date, players, eventName, eventPlayers }
 		nextBackupId = 1,
@@ -96,20 +96,19 @@ local function writeSnapshot(path, header, snap)
 	w:write("event_date=" .. field(e.startDate) .. "\r\n")
 	for username, n in pairs(snap.totals) do w:write("total\t" .. username .. "\t" .. num(n) .. "\r\n") end
 	for username, n in pairs(e.kills or {}) do w:write("event\t" .. username .. "\t" .. num(n) .. "\r\n") end
-	for username, n in pairs(snap.seen or {}) do w:write("seen\t" .. username .. "\t" .. num(n) .. "\r\n") end
-	for username, _ in pairs(snap.newLife or {}) do w:write("newlife\t" .. username .. "\t1\r\n") end
 	w:write("end\r\n")
 	w:close()
 	return true
 end
 
--- Returns { seq, totals, seen, newLife, event, complete } or nil when the file
--- is missing or has nothing in it.
+-- Returns { seq, totals, event, complete } or nil when the file is missing or
+-- has nothing in it. Lines of other kinds ("seen", "newlife" from the
+-- version that read getZombieKills) are skipped.
 local function readSnapshot(path)
 	local r = getFileReader(path, false)
 	if not r then return nil end
 	local snap = {
-		seq = 0, totals = {}, seen = {}, newLife = {},
+		seq = 0, totals = {},
 		event = { name = "", active = false, kills = {} }, complete = false,
 	}
 	local found = false
@@ -121,8 +120,6 @@ local function readSnapshot(path)
 			found = true
 			if kind == "total" then snap.totals[username] = tonumber(n)
 			elseif kind == "event" then snap.event.kills[username] = tonumber(n)
-			elseif kind == "seen" then snap.seen[username] = tonumber(n)
-			elseif kind == "newlife" then snap.newLife[username] = true
 			end
 		elseif line == "end" then
 			snap.complete = true
@@ -250,15 +247,13 @@ local function load()
 
 	if best then
 		S.seq = best.seq
-		S.totals, S.seen, S.newLife, S.event = best.totals, best.seen, best.newLife, copyEvent(best.event)
+		S.totals, S.event = best.totals, copyEvent(best.event)
 		log(string.format("loaded state seq %d: %d players, event '%s'", S.seq, countKeys(S.totals), S.event.name))
 	else
 		-- The first version of the mod kept everything in world ModData.
 		local old = ModData.get("DelScore")
 		if old and old.totals then
 			S.totals = DelScore.copyMap(old.totals)
-			S.seen = DelScore.copyMap(old.seen)
-			S.newLife = DelScore.copyMap(old.newLife)
 			if old.event then S.event = copyEvent(old.event) end
 			log("moved state from world ModData to files")
 		else
@@ -299,78 +294,20 @@ local function addKills(username, n)
 	changed()
 end
 
--- One reading of a character's counter.
-local function account(username, cur)
-	cur = math.floor(tonumber(cur) or 0)
-	local first = not readThisRun[username]
-	readThisRun[username] = true
-	local last = S.seen[username]
-	if S.newLife[username] then
-		-- First reading of a new character: the board is its counter. The
-		-- event gets the kills too, except on the first reading after a server
-		-- start: then the world may have been rolled back to before the death
-		-- and the counter is the old character's.
-		S.newLife[username] = nil
-		S.seen[username] = cur
-		S.totals[username] = cur
-		if not first and S.event.active and cur > 0 then
-			S.event.kills[username] = (S.event.kills[username] or 0) + cur
-		end
-		changed()
-	elseif last == nil then
-		-- Account seen for the first time: the character's kills so far go to
-		-- its board only, never to an event that is already running.
-		S.seen[username] = cur
-		S.totals[username] = cur
-		changed()
-	elseif cur > last then
-		S.seen[username] = cur
-		addKills(username, cur - last)
-	elseif cur < last and first and cur > 0 then
-		-- Server was stopped without saving the world: the character came back
-		-- with the counter of the last world save. Kills the boards already
-		-- have stay, counting goes on from the rolled back counter.
-		S.seen[username] = cur
-		S.totals[username] = cur
-		changed()
-		log(string.format("%s: zombie kills %d -> %d after a server start (world rolled back), resynced", username, last, cur))
-	elseif cur < last and warned[username] ~= cur then
-		-- Counter went down without a death we saw. Not counted and the old
-		-- reading is kept, so a counter that briefly reads 0 on login cannot
-		-- add the whole value a second time.
-		warned[username] = cur
-		log(string.format("%s: zombie kills went down %d -> %d without a death, ignored", username, last, cur))
-	end
-	if S.totals[username] == nil then
-		S.totals[username] = 0
-		changed()
-	end
-end
-
-local function pollPlayer(player)
-	if not player or player:isDead() then return end
-	local username = player:getUsername()
+local function onZombieDead(zombie)
+	local killer = zombie and zombie:getAttackedBy()
+	if not killer or not instanceof(killer, "IsoPlayer") then return end
+	local username = killer:getUsername()
 	if not username or username == "" then return end
-	account(username, player:getZombieKills())
-end
-
-local function pollAll()
 	state()
-	local players = getOnlinePlayers()
-	if not players then return end
-	for i = 0, players:size() - 1 do
-		pollPlayer(players:get(i))
-	end
+	addKills(username, 1)
 end
 
--- A dead character's IsoPlayer stays dead; the respawned one is a new object
--- with its counter at 0. Seeing the death is what tells a new character from a
--- counter that went down for some other reason.
+-- Death resets the player's row. A dead character's IsoPlayer stays dead; the
+-- respawned one is a new object. Also puts every online player on the board.
 local function checkDeaths()
 	for username, obj in pairs(alive) do
 		if obj:isDead() then
-			account(username, obj:getZombieKills())   -- kills since the last minute
-			S.newLife[username] = true
 			alive[username] = nil
 			S.totals[username] = 0
 			-- Read here, not cached: a file-scope read sees the schema default.
@@ -390,6 +327,10 @@ local function checkDeaths()
 			if username then
 				online[username] = true
 				if not p:isDead() then alive[username] = p end
+				if S.totals[username] == nil then
+					S.totals[username] = 0
+					changed()
+				end
 			end
 		end
 	end
@@ -459,7 +400,6 @@ local adminCommands = {}
 function adminCommands.eventNew(player, args)
 	local name = cleanName(args.name)
 	if not name then return end
-	pollAll()   -- kills made before the start go to the old event, not the new one
 	makeBackup("manual", "newEvent", player:getUsername(), S.event.name)
 	S.event = {
 		name = name, active = true, kills = {},
@@ -473,7 +413,6 @@ end
 
 function adminCommands.eventStop(player)
 	if not S.event.active then return end
-	pollAll()
 	S.event.active = false
 	S.event.stopHours = getGameTime():getWorldAgeHours()
 	changed()
@@ -483,7 +422,6 @@ end
 
 function adminCommands.eventResume(player)
 	if S.event.active or not S.event.startHours then return end
-	pollAll()   -- kills made while stopped stay out of the event
 	S.event.active = true
 	S.event.stopHours = nil
 	changed()
@@ -581,6 +519,6 @@ local function onTick()
 end
 
 Events.OnClientCommand.Add(onClientCommand)
-Events.EveryOneMinute.Add(pollAll)
+Events.OnZombieDead.Add(onZombieDead)
 Events.EveryDays.Add(function() state(); makeBackup("auto", "daily", "") end)
 Events.OnTick.Add(onTick)
