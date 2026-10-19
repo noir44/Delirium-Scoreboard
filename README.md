@@ -3,10 +3,12 @@
 Project Zomboid Build 42 mod for the Delirium server: zombie kill boards with
 two tabs.
 
-- **All time**: every zombie an account ever killed, summed over all its
-  characters. Dying does not reset it.
+- **Overall**: zombie kills of the player's current character. Death resets it
+  to 0: a respawn in Project Zomboid is a brand new character.
 - **Event**: kills made since an admin started the current event. A new event
-  starts this board from zero, so it can be used to score server events.
+  starts this board from zero, so it can be used to score server events. Death
+  resets the player's event score too, unless the sandbox option
+  *Death resets the event score* (`DelScore.EventResetOnDeath`) is off.
 
 PvP kills are not counted.
 
@@ -15,8 +17,7 @@ PvP kills are not counted.
 The source is vanilla's own counter `player:getZombieKills()`, the "Zombies
 killed" line on the character screen. Once per game minute the server reads it
 for every online player and adds the growth since the last reading to both
-boards. The server watches for deaths: when a player respawns, the new
-character's counter starts at 0 and its kills keep adding to the same total.
+boards. The server watches for deaths and resets the player's row then.
 
 The boards live in global ModData `DelScore` in the world save.
 

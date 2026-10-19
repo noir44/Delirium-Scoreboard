@@ -1,0 +1,5 @@
+{
+    "Sandbox_DelScore": "Delirium Scoreboard",
+    "Sandbox_DelScore_EventResetOnDeath": "Death resets the event score",
+    "Sandbox_DelScore_EventResetOnDeath_tooltip": "On: a player who dies during an event starts the event board from 0 with the new character. Off: event kills are kept across deaths. The main board is always per character."
+}

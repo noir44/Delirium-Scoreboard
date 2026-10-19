@@ -1,9 +1,9 @@
 {
   "IGUI_DelScore_Title": "Zombie kills",
   "IGUI_DelScore_ButtonTip": "Zombie kill boards",
-  "IGUI_DelScore_TabTotal": "All time",
+  "IGUI_DelScore_TabTotal": "Overall",
   "IGUI_DelScore_TabEvent": "Event",
-  "IGUI_DelScore_TotalInfo": "Every zombie killed, by all characters of the account",
+  "IGUI_DelScore_TotalInfo": "Kills of the current character; death resets them",
   "IGUI_DelScore_NoEvent": "No event has been started yet",
   "IGUI_DelScore_EventName": "Event: %1",
   "IGUI_DelScore_EventRunning": "Running since %1 (%2)",

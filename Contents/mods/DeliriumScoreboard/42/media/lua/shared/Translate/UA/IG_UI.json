@@ -1,9 +1,9 @@
 {
   "IGUI_DelScore_Title": "Вбивства зомбі",
   "IGUI_DelScore_ButtonTip": "Таблиці вбивств зомбі",
-  "IGUI_DelScore_TabTotal": "За весь час",
+  "IGUI_DelScore_TabTotal": "Загальна",
   "IGUI_DelScore_TabEvent": "Івент",
-  "IGUI_DelScore_TotalInfo": "Усі вбиті зомбі, усіма персонажами акаунта",
+  "IGUI_DelScore_TotalInfo": "Вбивства поточного персонажа, смерть обнуляє",
   "IGUI_DelScore_NoEvent": "Івент ще не запускався",
   "IGUI_DelScore_EventName": "Івент: %1",
   "IGUI_DelScore_EventRunning": "Триває з %1 (%2)",

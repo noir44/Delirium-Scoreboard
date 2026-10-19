@@ -1,15 +1,16 @@
 -- Delirium-Scoreboard: server side.
 --
 -- Two boards of zombie kills:
---   totals - every kill an account ever made, across all its characters;
+--   totals - kills of the player's current character; death sets it to 0
+--            (a respawn in PZ is a brand new character);
 --   event  - kills made while the current event runs (an admin starts it,
---            which starts this board from zero).
+--            which starts this board from zero); death sets it to 0 too
+--            unless the sandbox option DelScore.EventResetOnDeath is off.
 --
 -- The source is vanilla's own per-character counter player:getZombieKills()
 -- (the "Zombies killed" line of the character screen). The server reads it for
 -- every online player once a game minute and adds the growth since the last
--- reading to both boards, so a player is never counted twice and a new
--- character (counter back at 0) keeps adding to the same total.
+-- reading to both boards, so a player is never counted twice.
 --
 -- Everything lives in global ModData "DelScore" (never in player ModData: the
 -- client pushes its copy back and would overwrite server counts). Before every
@@ -83,9 +84,9 @@ local function account(d, username, cur)
 		addKills(d, username, cur)
 	elseif last == nil then
 		-- Account seen for the first time: the character's kills so far go to
-		-- the total only, never to an event that is already running.
+		-- its board only, never to an event that is already running.
 		d.seen[username] = cur
-		d.totals[username] = (d.totals[username] or 0) + cur
+		d.totals[username] = cur
 		changed()
 	elseif cur > last then
 		d.seen[username] = cur
@@ -128,7 +129,13 @@ local function checkDeaths(d)
 			account(d, username, obj:getZombieKills())   -- kills since the last minute
 			d.newLife[username] = true
 			alive[username] = nil
-			log(username .. " died, next character starts a new counter")
+			d.totals[username] = 0
+			-- Read here, not cached: a file-scope read sees the schema default.
+			local opts = SandboxVars.DelScore
+			local resetEvent = not (opts and opts.EventResetOnDeath == false)
+			if resetEvent and d.event.kills[username] then d.event.kills[username] = 0 end
+			changed()
+			log(username .. " died, board reset" .. (resetEvent and " (event too)" or ""))
 		end
 	end
 	local online = {}

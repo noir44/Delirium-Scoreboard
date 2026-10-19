@@ -1,0 +1,10 @@
+VERSION = 1,
+
+option DelScore.EventResetOnDeath
+{
+	type = boolean,
+	default = true,
+
+	page = DelScore,
+	translation = DelScore_EventResetOnDeath,
+}

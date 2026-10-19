@@ -1,0 +1,5 @@
+{
+    "Sandbox_DelScore": "Delirium Scoreboard",
+    "Sandbox_DelScore_EventResetOnDeath": "Смерть обнуляет счёт ивента",
+    "Sandbox_DelScore_EventResetOnDeath_tooltip": "Вкл: игрок, умерший во время ивента, начинает таблицу ивента с 0 новым персонажем. Выкл: убийства в ивенте сохраняются после смерти. Общая таблица всегда считает только текущего персонажа."
+}
